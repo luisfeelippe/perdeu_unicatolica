@@ -1,0 +1,16 @@
+name: perdeu_backend
+description: Backend API para o projeto Perdeu UniCatolica
+version: 1.0.0
+environment:
+  sdk: '>=3.11.1 <4.0.0'
+
+dependencies:
+  dart_frog: ^1.1.0
+  postgres: ^3.0.0
+  dart_jsonwebtoken: ^2.8.0
+  crypto: ^3.0.3
+  shelf_cors_headers: ^0.1.5
+
+dev_dependencies:
+  test: ^1.24.0
+  dart_frog_cli: ^1.1.0

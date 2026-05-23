@@ -14,3 +14,6 @@ dependencies:
 dev_dependencies:
   test: ^1.24.0
   dart_frog_cli: ^1.1.0
+  dart_frog_lint: ^0.1.0
+  mocktail: ^1.0.4
+  

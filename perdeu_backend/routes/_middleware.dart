@@ -1,16 +1,28 @@
 import 'package:dart_frog/dart_frog.dart';
-import 'package:shelf_cors_headers/shelf_cors_headers.dart' as shelf;
+
+const _corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Origin, Content-Type, Authorization',
+};
 
 Handler middleware(Handler handler) {
-  return handler.use(
-    fromShelfMiddleware(
-      shelf.corsHeaders(
-        headers: {
-          shelf.ACCESS_CONTROL_ALLOW_ORIGIN: '*', // Permite que o Chrome (Flutter Web) acesse a API
-          shelf.ACCESS_CONTROL_ALLOW_METHODS: 'GET, POST, PUT, DELETE, OPTIONS',
-          shelf.ACCESS_CONTROL_ALLOW_HEADERS: 'Origin, Content-Type, Authorization',
-        },
-      ),
-    ),
-  );
+  return (context) async {
+    // Responde às requisições de pré-verificação do navegador.
+    if (context.request.method == HttpMethod.options) {
+      return Response(
+        statusCode: 204,
+        headers: _corsHeaders,
+      );
+    }
+
+    final response = await handler(context);
+
+    return response.copyWith(
+      headers: {
+        ...response.headers,
+        ..._corsHeaders,
+      },
+    );
+  };
 }

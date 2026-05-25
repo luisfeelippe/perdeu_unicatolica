@@ -1,12 +1,13 @@
 import 'dart:convert';
 
 import 'package:dart_frog/dart_frog.dart';
-import 'package:postgres/postgres.dart';
 import 'package:perdeu_backend/src/config/db.dart';
+import 'package:perdeu_backend/src/services/gemini_service.dart';
+import 'package:postgres/postgres.dart';
 
 /// Endpoint de requerimentos.
 /// GET: retorna o feed público.
-/// POST: cria um novo requerimento vindo do Wizard.
+/// POST: cria um novo requerimento e executa triagem com IA.
 Future<Response> onRequest(RequestContext context) async {
   final request = context.request;
 
@@ -15,7 +16,7 @@ Future<Response> onRequest(RequestContext context) async {
   }
 
   if (request.method == HttpMethod.post) {
-    return _criarRequerimento(request);
+    return _criarRequerimentoComTriagem(request);
   }
 
   return Response.json(
@@ -47,6 +48,7 @@ Future<Response> _buscarRequerimentosRecentes() async {
       FROM requerimentos r
       INNER JOIN usuarios u ON u.id = r.usuario_id
       WHERE r.status <> 'CANCELADO'
+        AND r.status <> 'EM_ANALISE'
       ORDER BY r.data_hora_ocorrencia DESC;
       ''',
     );
@@ -87,7 +89,7 @@ Future<Response> _buscarRequerimentosRecentes() async {
   }
 }
 
-Future<Response> _criarRequerimento(Request request) async {
+Future<Response> _criarRequerimentoComTriagem(Request request) async {
   try {
     final body = await request.json() as Map<String, dynamic>;
 
@@ -99,12 +101,12 @@ Future<Response> _criarRequerimento(Request request) async {
     final descricao = body['descricao']?.toString().trim();
     final fotoUrl = body['foto_url']?.toString().trim();
     final fotoBase64 = body['foto_base64']?.toString().trim();
-
-    final fotoUrlFinal = fotoBase64 != null && fotoBase64.isNotEmpty
-    ? 'data:image/jpeg;base64,$fotoBase64'
-    : fotoUrl;
     final corPredominante = body['cor_predominante']?.toString().trim();
     final marca = body['marca']?.toString().trim();
+
+    final fotoUrlFinal = fotoBase64 != null && fotoBase64.isNotEmpty
+        ? 'data:image/jpeg;base64,$fotoBase64'
+        : fotoUrl;
 
     if (matricula == null ||
         matricula.isEmpty ||
@@ -137,18 +139,18 @@ Future<Response> _criarRequerimento(Request request) async {
 
     final conn = await DB().connection;
 
-      final usuarioResult = await conn.execute(
-    Sql.named('''
-    SELECT id
-    FROM usuarios
-    WHERE matricula = @matricula
-      AND status_ativo = true
-    LIMIT 1;
-    '''),
-    parameters: {
-      'matricula': matricula,
-    },
-  );
+    final usuarioResult = await conn.execute(
+      Sql.named('''
+      SELECT id
+      FROM usuarios
+      WHERE matricula = @matricula
+        AND status_ativo = true
+      LIMIT 1;
+      '''),
+      parameters: {
+        'matricula': matricula,
+      },
+    );
 
     if (usuarioResult.isEmpty) {
       return Response.json(
@@ -161,7 +163,44 @@ Future<Response> _criarRequerimento(Request request) async {
 
     final usuarioId = usuarioResult.first.toColumnMap()['id'].toString();
 
-    final statusInicial = tipo == 'PERDA' ? 'PERDIDO' : 'ENCONTRADO';
+    final candidatos = await _buscarCandidatosParaTriagem(
+      conn: conn,
+      tipo: tipo,
+      categoria: categoria,
+    );
+
+    var statusFinal = 'PENDENTE';
+    GeminiTriagemResultado? resultadoTriagem;
+
+    try {
+      if (candidatos.isNotEmpty) {
+        final geminiService = GeminiService();
+
+        resultadoTriagem = await geminiService.analisarTriagem(
+          novoObjeto: {
+            'tipo': tipo,
+            'categoria': categoria,
+            'local_ocorrencia': localOcorrencia,
+            'data_hora_ocorrencia': dataHoraOcorrencia,
+            'descricao': descricao,
+            'cor_predominante': corPredominante,
+            'marca': marca,
+          },
+          candidatosHistoricos: candidatos,
+        );
+
+        if (resultadoTriagem.candidatoId != null &&
+            resultadoTriagem.scoreConfianca > 85) {
+          statusFinal = 'EM_ANALISE';
+        }
+      }
+    } catch (e) {
+      // Circuit breaker:
+      // Se a IA falhar, o requerimento continua sendo salvo como PENDENTE.
+      print('Falha silenciosa na triagem Gemini: $e');
+      resultadoTriagem = null;
+      statusFinal = 'PENDENTE';
+    }
 
     final insertResult = await conn.execute(
       Sql.named('''
@@ -193,17 +232,19 @@ Future<Response> _criarRequerimento(Request request) async {
         NOW(),
         NOW()
       )
-        RETURNING id;
-        '''),
-        parameters: {
+      RETURNING id;
+      '''),
+      parameters: {
         'usuario_id': usuarioId,
         'tipo': tipo,
         'categoria': categoria,
         'local_ocorrencia': localOcorrencia,
         'data_hora_ocorrencia': dataHoraOcorrencia,
         'descricao': descricao,
-        'foto_url': fotoUrlFinal == null || fotoUrlFinal.isEmpty ? null : fotoUrlFinal,
-        'status': statusInicial,
+        'foto_url': fotoUrlFinal == null || fotoUrlFinal.isEmpty
+            ? null
+            : fotoUrlFinal,
+        'status': statusFinal,
         'cor_predominante':
             corPredominante == null || corPredominante.isEmpty
                 ? null
@@ -214,12 +255,30 @@ Future<Response> _criarRequerimento(Request request) async {
 
     final requerimentoId = insertResult.first.toColumnMap()['id'].toString();
 
+    if (statusFinal == 'EM_ANALISE' &&
+        resultadoTriagem != null &&
+        resultadoTriagem.candidatoId != null) {
+      await _registrarMatchTriagem(
+        conn: conn,
+        requerimentoNovoId: requerimentoId,
+        candidatoId: resultadoTriagem.candidatoId!,
+        score: resultadoTriagem.scoreConfianca,
+        justificativa: resultadoTriagem.justificativa,
+      );
+    }
+
     return Response.json(
       statusCode: 201,
       body: {
         'message': 'Requerimento criado com sucesso',
         'id': requerimentoId,
-        'status': statusInicial,
+        'status': statusFinal,
+        'triagem': {
+          'executada': candidatos.isNotEmpty,
+          'candidato_id': resultadoTriagem?.candidatoId,
+          'score_confianca': resultadoTriagem?.scoreConfianca ?? 0,
+          'justificativa': resultadoTriagem?.justificativa,
+        },
       },
     );
   } catch (e) {
@@ -231,4 +290,92 @@ Future<Response> _criarRequerimento(Request request) async {
       },
     );
   }
+}
+
+Future<List<Map<String, dynamic>>> _buscarCandidatosParaTriagem({
+  required Connection conn,
+  required String tipo,
+  required String categoria,
+}) async {
+  final tipoOposto = tipo == 'PERDA' ? 'ACHADO' : 'PERDA';
+
+  final result = await conn.execute(
+    Sql.named('''
+    SELECT
+      id,
+      tipo,
+      categoria,
+      local_ocorrencia,
+      data_hora_ocorrencia,
+      descricao,
+      status,
+      cor_predominante,
+      marca
+    FROM requerimentos
+    WHERE tipo = @tipo_oposto
+      AND LOWER(categoria) = LOWER(@categoria)
+      AND data_hora_ocorrencia >= NOW() - INTERVAL '30 days'
+      AND status <> 'CANCELADO'
+      AND status <> 'EM_ANALISE'
+    ORDER BY data_hora_ocorrencia DESC
+    LIMIT 5;
+    '''),
+    parameters: {
+      'tipo_oposto': tipoOposto,
+      'categoria': categoria,
+    },
+  );
+
+  return result.map((row) {
+    final data = row.toColumnMap();
+
+    return {
+      'id': data['id'].toString(),
+      'tipo': data['tipo'],
+      'categoria': data['categoria'],
+      'local_ocorrencia': data['local_ocorrencia'],
+      'data_hora_ocorrencia': data['data_hora_ocorrencia']?.toString(),
+      'descricao': data['descricao'],
+      'status': data['status'],
+      'cor_predominante': data['cor_predominante'],
+      'marca': data['marca'],
+    };
+  }).toList();
+}
+
+Future<void> _registrarMatchTriagem({
+  required Connection conn,
+  required String requerimentoNovoId,
+  required String candidatoId,
+  required int score,
+  required String justificativa,
+}) async {
+  await conn.execute(
+    Sql.named('''
+    INSERT INTO matches_triagem (
+      requerimento_novo_id,
+      requerimento_candidato_id,
+      score_confianca,
+      justificativa,
+      status_triagem,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      @requerimento_novo_id,
+      @requerimento_candidato_id,
+      @score_confianca,
+      @justificativa,
+      'PENDENTE_ADMIN',
+      NOW(),
+      NOW()
+    );
+    '''),
+    parameters: {
+      'requerimento_novo_id': requerimentoNovoId,
+      'requerimento_candidato_id': candidatoId,
+      'score_confianca': score,
+      'justificativa': justificativa,
+    },
+  );
 }

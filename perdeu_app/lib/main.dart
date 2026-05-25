@@ -6,6 +6,7 @@ import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/nova_senha_screen.dart';
 import 'presentation/screens/auth/recuperacao_screen.dart';
 import 'presentation/screens/home/main_screen.dart';
+import 'presentation/screens/detalhes/detalhes_screen.dart';
 
 import 'presentation/screens/wizard/wizard_tipo_screen.dart';
 import 'presentation/screens/wizard/wizard_categoria_screen.dart';
@@ -42,6 +43,7 @@ class PerdeuApp extends StatelessWidget {
           backgroundColor: Colors.white,
           foregroundColor: Color(0xFF1F1F1F),
           elevation: 0,
+          centerTitle: true,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -66,6 +68,15 @@ class PerdeuApp extends StatelessWidget {
             ),
           ),
         ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryOrange,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+        ),
       ),
       initialRoute: AppRoutes.login,
       routes: {
@@ -80,6 +91,8 @@ class PerdeuApp extends StatelessWidget {
         AppRoutes.wizardDataHora: (context) => const WizardDataHoraScreen(),
         AppRoutes.wizardDetalhes: (context) => const WizardDetalhesScreen(),
         AppRoutes.wizardRevisao: (context) => const WizardRevisaoScreen(),
+
+        AppRoutes.detalhes: (context) => const DetalhesScreen(),
       },
     );
   }

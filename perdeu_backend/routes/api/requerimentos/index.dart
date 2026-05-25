@@ -343,7 +343,7 @@ Future<List<Map<String, dynamic>>> _buscarCandidatosParaTriagem({
   }).toList();
 }
 
-Future<void> _registrarMatchTriagem({
+  Future<void> _registrarMatchTriagem({
   required Connection conn,
   required String requerimentoNovoId,
   required String candidatoId,
@@ -376,6 +376,21 @@ Future<void> _registrarMatchTriagem({
       'requerimento_candidato_id': candidatoId,
       'score_confianca': score,
       'justificativa': justificativa,
+    },
+  );
+
+  // Quando a IA encontra um match forte, também ocultamos o candidato antigo
+  // para evitar que ele continue aparecendo no feed público.
+  await conn.execute(
+    Sql.named('''
+    UPDATE requerimentos
+    SET 
+      status = 'EM_ANALISE',
+      updated_at = NOW()
+    WHERE id = @requerimento_candidato_id;
+    '''),
+    parameters: {
+      'requerimento_candidato_id': candidatoId,
     },
   );
 }

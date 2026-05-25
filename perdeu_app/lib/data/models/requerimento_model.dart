@@ -8,6 +8,8 @@ class RequerimentoModel {
   final String? fotoUrl;
   final String status;
   final String? usuarioNome;
+  final String? corPredominante;
+  final String? marca;
 
   RequerimentoModel({
     required this.id,
@@ -19,6 +21,8 @@ class RequerimentoModel {
     required this.status,
     this.fotoUrl,
     this.usuarioNome,
+    this.corPredominante,
+    this.marca,
   });
 
   factory RequerimentoModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,36 @@ class RequerimentoModel {
       fotoUrl: json['foto_url']?.toString(),
       status: json['status']?.toString() ?? '',
       usuarioNome: json['usuario_nome']?.toString(),
+      corPredominante: json['cor_predominante']?.toString(),
+      marca: json['marca']?.toString(),
+    );
+  }
+
+  RequerimentoModel copyWith({
+    String? id,
+    String? tipo,
+    String? categoria,
+    String? localOcorrencia,
+    DateTime? dataHoraOcorrencia,
+    String? descricao,
+    String? fotoUrl,
+    String? status,
+    String? usuarioNome,
+    String? corPredominante,
+    String? marca,
+  }) {
+    return RequerimentoModel(
+      id: id ?? this.id,
+      tipo: tipo ?? this.tipo,
+      categoria: categoria ?? this.categoria,
+      localOcorrencia: localOcorrencia ?? this.localOcorrencia,
+      dataHoraOcorrencia: dataHoraOcorrencia ?? this.dataHoraOcorrencia,
+      descricao: descricao ?? this.descricao,
+      fotoUrl: fotoUrl ?? this.fotoUrl,
+      status: status ?? this.status,
+      usuarioNome: usuarioNome ?? this.usuarioNome,
+      corPredominante: corPredominante ?? this.corPredominante,
+      marca: marca ?? this.marca,
     );
   }
 
@@ -49,6 +83,8 @@ class RequerimentoModel {
       'foto_url': fotoUrl,
       'status': status,
       'usuario_nome': usuarioNome,
+      'cor_predominante': corPredominante,
+      'marca': marca,
     };
   }
 }

@@ -73,7 +73,8 @@ class RequerimentoRepository {
             uri,
             headers: {
               'Content-Type': 'application/json',
-              if (token != null) 'Authorization': 'Bearer $token',
+              if (token != null && token.isNotEmpty)
+                'Authorization': 'Bearer $token',
             },
             body: jsonEncode(
               draft.toJson(
@@ -82,7 +83,7 @@ class RequerimentoRepository {
             ),
           )
           .timeout(
-            const Duration(seconds: 12),
+            const Duration(seconds: 20),
           );
 
       final decoded = jsonDecode(response.body);
@@ -100,6 +101,113 @@ class RequerimentoRepository {
       }
 
       return decoded['id']?.toString() ?? '';
+    } on SocketException {
+      throw Exception('Sem conexão com o servidor.');
+    } on TimeoutException {
+      throw Exception('Tempo de resposta excedido.');
+    } on FormatException {
+      throw Exception('Erro ao interpretar resposta do servidor.');
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<List<RequerimentoModel>> fetchMeusRequerimentos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? prefs.getString('jwt');
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Sessão expirada. Faça login novamente.');
+      }
+
+      final uri = Uri.parse('$_baseUrl/api/requerimentos/meus');
+
+      final response = await _client
+          .get(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(
+            const Duration(seconds: 10),
+          );
+
+      if (response.statusCode == 401) {
+        throw Exception('Sessão expirada. Faça login novamente.');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception('Erro ao carregar seus requerimentos.');
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is! List) {
+        throw Exception('Resposta inválida da API.');
+      }
+
+      return decoded
+          .map(
+            (item) => RequerimentoModel.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    } on SocketException {
+      throw Exception('Sem conexão com o servidor.');
+    } on TimeoutException {
+      throw Exception('Tempo de resposta excedido.');
+    } on FormatException {
+      throw Exception('Erro ao interpretar resposta do servidor.');
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<bool> cancelarRequerimento({
+    required String id,
+    required String justificativa,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? prefs.getString('jwt');
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Sessão expirada. Faça login novamente.');
+      }
+
+      final uri = Uri.parse('$_baseUrl/api/requerimentos/$id/cancelar');
+
+      final response = await _client
+          .patch(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'justificativa': justificativa,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+          );
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        throw Exception(
+          decoded['erro']?.toString() ?? 'Erro ao cancelar requerimento.',
+        );
+      }
+
+      throw Exception('Erro ao cancelar requerimento.');
     } on SocketException {
       throw Exception('Sem conexão com o servidor.');
     } on TimeoutException {

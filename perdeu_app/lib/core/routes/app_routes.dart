@@ -10,4 +10,6 @@ class AppRoutes {
   static const String wizardDataHora = '/wizard_data_hora';
   static const String wizardDetalhes = '/wizard_detalhes';
   static const String wizardRevisao = '/wizard_revisao';
+
+  static const String detalhes = '/detalhes';
 }

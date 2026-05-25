@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'atualizacoes_view.dart';
 import 'home_view.dart';
 
 class MainScreen extends StatefulWidget {
@@ -19,11 +20,7 @@ class _MainScreenState extends State<MainScreen> {
       title: 'Objetos',
       subtitle: 'Aqui ficarão os objetos e filtros do sistema.',
     ),
-    _PlaceholderView(
-      icon: Icons.notifications_none_rounded,
-      title: 'Atualizações',
-      subtitle: 'Aqui aparecerão as movimentações das suas solicitações.',
-    ),
+    AtualizacoesView(),
     _PlaceholderView(
       icon: Icons.person_outline_rounded,
       title: 'Perfil',

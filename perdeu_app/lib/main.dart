@@ -7,6 +7,13 @@ import 'presentation/screens/auth/nova_senha_screen.dart';
 import 'presentation/screens/auth/recuperacao_screen.dart';
 import 'presentation/screens/home/main_screen.dart';
 
+import 'presentation/screens/wizard/wizard_tipo_screen.dart';
+import 'presentation/screens/wizard/wizard_categoria_screen.dart';
+import 'presentation/screens/wizard/wizard_local_screen.dart';
+import 'presentation/screens/wizard/wizard_data_hora_screen.dart';
+import 'presentation/screens/wizard/wizard_detalhes_screen.dart';
+import 'presentation/screens/wizard/wizard_revisao_screen.dart';
+
 void main() {
   runApp(const PerdeuApp());
 }
@@ -66,11 +73,13 @@ class PerdeuApp extends StatelessWidget {
         AppRoutes.novaSenha: (context) => const NovaSenhaScreen(),
         AppRoutes.recuperarSenha: (context) => const RecuperacaoScreen(),
         AppRoutes.home: (context) => const MainScreen(),
-        AppRoutes.wizardTipo: (context) => const Scaffold(
-              body: Center(
-                child: Text('Wizard de Requerimento será feito no Módulo 3'),
-              ),
-            ),
+
+        AppRoutes.wizardTipo: (context) => const WizardTipoScreen(),
+        AppRoutes.wizardCategoria: (context) => const WizardCategoriaScreen(),
+        AppRoutes.wizardLocal: (context) => const WizardLocalScreen(),
+        AppRoutes.wizardDataHora: (context) => const WizardDataHoraScreen(),
+        AppRoutes.wizardDetalhes: (context) => const WizardDetalhesScreen(),
+        AppRoutes.wizardRevisao: (context) => const WizardRevisaoScreen(),
       },
     );
   }

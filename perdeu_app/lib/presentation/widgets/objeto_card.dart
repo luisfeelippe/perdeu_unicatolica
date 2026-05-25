@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -134,6 +136,30 @@ class ObjetoCard extends StatelessWidget {
       return _placeholderBonito();
     }
 
+    if (imageUrl.startsWith('data:image')) {
+      final base64Data = imageUrl.split(',').last;
+      final bytes = base64Decode(base64Data);
+
+      return AspectRatio(
+        aspectRatio: 1.15,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFF4EC),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Image.memory(
+              bytes,
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
+            ),
+          ),
+        ),
+      );
+    }
+
     return AspectRatio(
       aspectRatio: 1.15,
       child: Container(
@@ -160,6 +186,7 @@ class ObjetoCard extends StatelessWidget {
     final categoria = requerimento.categoria.toLowerCase();
 
     // Evita mostrar imagem errada de cofre quando a categoria for chave.
+    // Se você quiser usar assets/images/chave.png aqui depois, dá para ajustar.
     if (categoria.contains('chave')) {
       return true;
     }

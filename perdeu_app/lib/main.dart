@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'presentation/screens/detalhes/protocolo_screen.dart';
+import 'presentation/screens/detalhes/termo_assinatura_screen.dart';
+
 import 'core/routes/app_routes.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/nova_senha_screen.dart';
@@ -14,6 +17,8 @@ import 'presentation/screens/wizard/wizard_local_screen.dart';
 import 'presentation/screens/wizard/wizard_data_hora_screen.dart';
 import 'presentation/screens/wizard/wizard_detalhes_screen.dart';
 import 'presentation/screens/wizard/wizard_revisao_screen.dart';
+
+import 'presentation/screens/admin/admin_dashboard_screen.dart';
 
 void main() {
   runApp(const PerdeuApp());
@@ -93,6 +98,10 @@ class PerdeuApp extends StatelessWidget {
         AppRoutes.wizardRevisao: (context) => const WizardRevisaoScreen(),
 
         AppRoutes.detalhes: (context) => const DetalhesScreen(),
+        AppRoutes.protocolo: (context) => const ProtocoloScreen(),
+        AppRoutes.assinarTermo: (context) => const TermoAssinaturaScreen(),
+
+        AppRoutes.admin: (context) => const AdminDashboardScreen(),
       },
     );
   }

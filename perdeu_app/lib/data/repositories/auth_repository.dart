@@ -29,23 +29,26 @@ class AuthRepository {
         };
       }
 
+      final payload = _decodeJwtPayload(token);
+
       final prefs = await SharedPreferences.getInstance();
 
-      // Salva sempre o token, porque o app precisa dele para:
-      // - Atualizações
-      // - Meus requerimentos
-      // - Cancelamento
-      // - Futuras rotas privadas
       await prefs.setString('token', token);
       await prefs.setString('jwt', token);
       await prefs.setString('jwt_token', token);
       await prefs.setString('matricula', matricula.trim());
       await prefs.setString('user_matricula', matricula.trim());
 
+      if (payload != null) {
+        await prefs.setString('usuario_id', payload['id']?.toString() ?? '');
+        await prefs.setString('perfil', payload['perfil']?.toString() ?? '');
+      }
+
       return {
         'sucesso': true,
         'primeiro_acesso': data['primeiro_acesso'] ?? false,
         'token': token,
+        'perfil': payload?['perfil'],
       };
     }
 
@@ -69,6 +72,41 @@ class AuthRepository {
     return response.statusCode == 200;
   }
 
+  Future<bool> alterarSenha({
+    required String senhaAntiga,
+    required String novaSenha,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? prefs.getString('jwt');
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Sessão expirada. Faça login novamente.');
+    }
+
+    final response = await _apiClient.put(
+      '/perfil/senha',
+      {
+        'senha_antiga': senhaAntiga,
+        'nova_senha': novaSenha,
+      },
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    final data = jsonDecode(response.body);
+
+    if (data is Map<String, dynamic>) {
+      throw Exception(data['erro']?.toString() ?? 'Erro ao alterar senha.');
+    }
+
+    throw Exception('Erro ao alterar senha.');
+  }
+
   Future<String> recuperarSenha(String matricula) async {
     final response = await _apiClient.post('/auth/recuperar-senha', {
       'matricula': matricula.trim(),
@@ -87,5 +125,22 @@ class AuthRepository {
     await prefs.remove('jwt_token');
     await prefs.remove('matricula');
     await prefs.remove('user_matricula');
+    await prefs.remove('usuario_id');
+    await prefs.remove('perfil');
+  }
+
+  Map<String, dynamic>? _decodeJwtPayload(String token) {
+    try {
+      final parts = token.split('.');
+
+      if (parts.length < 2) return null;
+
+      final normalized = base64Url.normalize(parts[1]);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+
+      return jsonDecode(decoded) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
   }
 }

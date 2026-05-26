@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/routes/app_routes.dart';
 import '../../../data/models/requerimento_model.dart';
 import '../../../data/repositories/requerimento_repository.dart';
 import '../../widgets/timeline_widget.dart';
@@ -63,6 +64,17 @@ class _DetalhesScreenState extends State<DetalhesScreen> {
     return status != 'CANCELADO' &&
         status != 'CONCLUIDO' &&
         status != 'APROVADO' &&
+        status != 'DEVOLVIDO' &&
+        _requerimento.id.isNotEmpty;
+  }
+
+  bool get _podeAssinarRetirada {
+    final status = _requerimento.status.toUpperCase();
+
+    return status != 'CANCELADO' &&
+        status != 'CONCLUIDO' &&
+        status != 'APROVADO' &&
+        status != 'DEVOLVIDO' &&
         _requerimento.id.isNotEmpty;
   }
 
@@ -78,14 +90,14 @@ class _DetalhesScreenState extends State<DetalhesScreen> {
           top: Radius.circular(28),
         ),
       ),
-      builder: (context) {
+      builder: (modalContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (modalContext, setModalState) {
             Future<void> cancelar() async {
               final justificativa = _justificativaController.text.trim();
 
               if (justificativa.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(modalContext).showSnackBar(
                   const SnackBar(
                     backgroundColor: Colors.red,
                     content: Text('Informe uma justificativa.'),
@@ -107,7 +119,7 @@ class _DetalhesScreenState extends State<DetalhesScreen> {
                 if (!mounted) return;
 
                 if (sucesso) {
-                  Navigator.pop(context);
+                  Navigator.pop(modalContext);
 
                   setState(() {
                     _cancelando = false;
@@ -146,7 +158,7 @@ class _DetalhesScreenState extends State<DetalhesScreen> {
                 left: 18,
                 right: 18,
                 top: 22,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 18,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -288,6 +300,28 @@ class _DetalhesScreenState extends State<DetalhesScreen> {
           _DescricaoBox(descricao: _requerimento.descricao),
           const SizedBox(height: 16),
           TimelineWidget(status: _requerimento.status),
+          if (_podeAssinarRetirada) ...[
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.protocolo,
+                    arguments: _requerimento,
+                  );
+                },
+                icon: const Icon(Icons.qr_code_2_rounded),
+                label: const Text(
+                  'Gerar Protocolo de Retirada',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (_podeCancelar) ...[
             const SizedBox(height: 20),
             TextButton.icon(
@@ -318,6 +352,10 @@ class _DetalhesScreenState extends State<DetalhesScreen> {
         return 'Aprovado';
       case 'DEVOLVIDO':
         return 'Devolvido';
+      case 'PERDIDO':
+        return 'Perdido';
+      case 'ENCONTRADO':
+        return 'Encontrado';
       default:
         return status;
     }

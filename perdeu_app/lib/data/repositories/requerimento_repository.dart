@@ -218,4 +218,61 @@ class RequerimentoRepository {
       throw Exception(e.toString().replaceFirst('Exception: ', ''));
     }
   }
+
+  Future<bool> assinarTermo({
+    required String id,
+    required String cpf,
+    required String senha,
+    required String dispositivoModelo,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? prefs.getString('jwt');
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Sessão expirada. Faça login novamente.');
+      }
+
+      final uri = Uri.parse('$_baseUrl/api/requerimentos/$id/assinar');
+
+      final response = await _client
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'cpf': cpf,
+              'senha': senha,
+              'dispositivo_modelo': dispositivoModelo,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+          );
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        throw Exception(
+          decoded['erro']?.toString() ?? 'Erro ao assinar termo.',
+        );
+      }
+
+      throw Exception('Erro ao assinar termo.');
+    } on SocketException {
+      throw Exception('Sem conexão com o servidor.');
+    } on TimeoutException {
+      throw Exception('Tempo de resposta excedido.');
+    } on FormatException {
+      throw Exception('Erro ao interpretar resposta do servidor.');
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
 }

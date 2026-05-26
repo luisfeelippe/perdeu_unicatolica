@@ -7,7 +7,16 @@ import '../../../data/repositories/requerimento_repository.dart';
 import '../../widgets/objeto_card.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  const HomeView({
+    super.key,
+    required this.onAbrirAtualizacoes,
+    required this.onAbrirObjetos,
+    required this.onAbrirPerfil,
+  });
+
+  final VoidCallback onAbrirAtualizacoes;
+  final VoidCallback onAbrirObjetos;
+  final VoidCallback onAbrirPerfil;
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -66,6 +75,7 @@ class _HomeViewState extends State<HomeView> {
             child: _HeaderHome(
               saudacao: _saudacao,
               nomeUsuario: _nomeUsuario,
+              onAbrirPerfil: widget.onAbrirPerfil,
             ),
           ),
           SliverToBoxAdapter(
@@ -73,13 +83,8 @@ class _HomeViewState extends State<HomeView> {
               onAbrirRequerimento: () {
                 Navigator.pushNamed(context, AppRoutes.wizardTipo);
               },
-              onAcompanhar: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('A aba Atualizações será integrada em breve.'),
-                  ),
-                );
-              },
+              onAcompanhar: widget.onAbrirAtualizacoes,
+              onVerObjetos: widget.onAbrirObjetos,
             ),
           ),
           const SliverToBoxAdapter(
@@ -120,7 +125,9 @@ class _HomeViewState extends State<HomeView> {
                 );
               }
 
-              final requerimentos = snapshot.data ?? [];
+              final requerimentos = (snapshot.data ?? [])
+                  .where((item) => item.status.toUpperCase() != 'CANCELADO')
+                  .toList();
 
               if (requerimentos.isEmpty) {
                 return const SliverToBoxAdapter(
@@ -148,10 +155,12 @@ class _HeaderHome extends StatelessWidget {
   const _HeaderHome({
     required this.saudacao,
     required this.nomeUsuario,
+    required this.onAbrirPerfil,
   });
 
   final String saudacao;
   final String nomeUsuario;
+  final VoidCallback onAbrirPerfil;
 
   @override
   Widget build(BuildContext context) {
@@ -211,12 +220,20 @@ class _HeaderHome extends StatelessWidget {
                 ],
               ),
             ),
-            const CircleAvatar(
-              radius: 24,
-              backgroundColor: Color(0xFFFF6600),
-              child: Icon(
-                Icons.person,
-                color: Colors.white,
+            Material(
+              color: const Color(0xFFFF6600),
+              shape: const CircleBorder(),
+              child: InkWell(
+                onTap: onAbrirPerfil,
+                customBorder: const CircleBorder(),
+                child: const SizedBox(
+                  height: 48,
+                  width: 48,
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ],
@@ -230,36 +247,52 @@ class _QuickActions extends StatelessWidget {
   const _QuickActions({
     required this.onAbrirRequerimento,
     required this.onAcompanhar,
+    required this.onVerObjetos,
   });
 
   final VoidCallback onAbrirRequerimento;
   final VoidCallback onAcompanhar;
+  final VoidCallback onVerObjetos;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _ActionCard(
-              title: 'Abrir Requerimento',
-              icon: Icons.add_circle_outline,
-              backgroundColor: const Color(0xFFFF6600),
-              textColor: Colors.white,
-              onTap: onAbrirRequerimento,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _ActionCard(
+                  title: 'Abrir Requerimento',
+                  icon: Icons.add_circle_outline,
+                  backgroundColor: const Color(0xFFFF6600),
+                  textColor: Colors.white,
+                  onTap: onAbrirRequerimento,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionCard(
+                  title: 'Acompanhar Solicitações',
+                  icon: Icons.timeline_outlined,
+                  backgroundColor: Colors.white,
+                  textColor: const Color(0xFFFF6600),
+                  borderColor: const Color(0xFFFF6600),
+                  onTap: onAcompanhar,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _ActionCard(
-              title: 'Acompanhar Solicitações',
-              icon: Icons.timeline_outlined,
-              backgroundColor: Colors.white,
-              textColor: const Color(0xFFFF6600),
-              borderColor: const Color(0xFFFF6600),
-              onTap: onAcompanhar,
-            ),
+          const SizedBox(height: 12),
+          _ActionCard(
+            title: 'Ver todos os objetos',
+            icon: Icons.inventory_2_outlined,
+            backgroundColor: const Color(0xFFFFEFE4),
+            textColor: const Color(0xFFFF6600),
+            borderColor: const Color(0xFFFFD1B0),
+            onTap: onVerObjetos,
+            horizontal: true,
           ),
         ],
       ),
@@ -275,6 +308,7 @@ class _ActionCard extends StatelessWidget {
     required this.textColor,
     required this.onTap,
     this.borderColor,
+    this.horizontal = false,
   });
 
   final String title;
@@ -283,6 +317,7 @@ class _ActionCard extends StatelessWidget {
   final Color textColor;
   final Color? borderColor;
   final VoidCallback onTap;
+  final bool horizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -293,7 +328,10 @@ class _ActionCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: horizontal ? 16 : 20,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             border: borderColor != null
@@ -307,26 +345,42 @@ class _ActionCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: textColor,
-                size: 28,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  height: 1.2,
+          child: horizontal
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: textColor, size: 24),
+                    const SizedBox(width: 10),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Icon(
+                      icon,
+                      color: textColor,
+                      size: 28,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

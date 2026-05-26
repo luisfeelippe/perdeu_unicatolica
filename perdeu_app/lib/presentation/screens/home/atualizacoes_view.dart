@@ -117,7 +117,9 @@ class _AtualizacoesViewState extends State<AtualizacoesView> {
               );
             }
 
-            final requerimentos = snapshot.data ?? [];
+            final requerimentos = (snapshot.data ?? [])
+                .where((item) => item.status.toUpperCase() != 'CANCELADO')
+                .toList();
 
             if (requerimentos.isEmpty) {
               return ListView(
@@ -132,7 +134,7 @@ class _AtualizacoesViewState extends State<AtualizacoesView> {
                   ),
                   SizedBox(height: 14),
                   Text(
-                    'Você ainda não possui nenhum requerimento aberto.',
+                    'Você não possui requerimentos ativos.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
@@ -141,7 +143,7 @@ class _AtualizacoesViewState extends State<AtualizacoesView> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Quando você abrir um requerimento, ele aparecerá aqui.',
+                    'Requerimentos cancelados são removidos da visualização, mas continuam salvos para auditoria.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.black54,
@@ -328,8 +330,6 @@ class _AtualizacaoCard extends StatelessWidget {
         return 'Pendente';
       case 'EM_ANALISE':
         return 'Em análise';
-      case 'CANCELADO':
-        return 'Cancelado';
       case 'CONCLUIDO':
         return 'Concluído';
       case 'APROVADO':
@@ -356,11 +356,6 @@ class _AtualizacaoCard extends StatelessWidget {
         return const _StatusStyle(
           backgroundColor: Color(0xFFFFF4CC),
           textColor: Color(0xFF946200),
-        );
-      case 'CANCELADO':
-        return const _StatusStyle(
-          backgroundColor: Color(0xFFFFE2E2),
-          textColor: Color(0xFFB42318),
         );
       case 'CONCLUIDO':
       case 'APROVADO':

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'atualizacoes_view.dart';
 import 'home_view.dart';
+import 'objetos_view.dart';
+import 'perfil_view.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -13,40 +15,38 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _indiceAtual = 0;
 
-  final List<Widget> _telas = const [
-    HomeView(),
-    _PlaceholderView(
-      icon: Icons.inventory_2_outlined,
-      title: 'Objetos',
-      subtitle: 'Aqui ficarão os objetos e filtros do sistema.',
-    ),
-    AtualizacoesView(),
-    _PlaceholderView(
-      icon: Icons.person_outline_rounded,
-      title: 'Perfil',
-      subtitle: 'Aqui ficarão os dados da conta do utilizador.',
-    ),
-  ];
+  void _mudarAba(int index) {
+    setState(() {
+      _indiceAtual = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     const primaryOrange = Color(0xFFFF6600);
 
+    final telas = [
+      HomeView(
+        onAbrirAtualizacoes: () => _mudarAba(2),
+        onAbrirObjetos: () => _mudarAba(1),
+        onAbrirPerfil: () => _mudarAba(3),
+      ),
+      const ObjetosView(),
+      const AtualizacoesView(),
+      const PerfilView(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _indiceAtual,
-        children: _telas,
+        children: telas,
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFFFFE4D1),
         selectedIndex: _indiceAtual,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (index) {
-          setState(() {
-            _indiceAtual = index;
-          });
-        },
+        onDestinationSelected: _mudarAba,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -69,68 +69,6 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Perfil',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderView extends StatelessWidget {
-  const _PlaceholderView({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFF7F4F2),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 54,
-                  color: const Color(0xFFFF6600),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

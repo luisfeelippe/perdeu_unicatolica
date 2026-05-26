@@ -12,4 +12,8 @@ class AppRoutes {
   static const String wizardRevisao = '/wizard_revisao';
 
   static const String detalhes = '/detalhes';
+  static const String protocolo = '/protocolo';
+  static const String assinarTermo = '/assinar_termo';
+
+  static const String admin = '/admin';
 }

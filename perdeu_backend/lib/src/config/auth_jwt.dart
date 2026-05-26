@@ -4,15 +4,17 @@ import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 const String jwtSecret = 'CHAVE_SECRETA_SUPER_SEGURA_UNICATOLICA';
 
 class UsuarioAutenticado {
-  final String id;
-  final String matricula;
-  final String perfil;
-
   const UsuarioAutenticado({
     required this.id,
     required this.matricula,
     required this.perfil,
   });
+
+  final String id;
+  final String matricula;
+  final String perfil;
+
+  bool get isAdmin => perfil.toUpperCase() == 'ADMIN';
 }
 
 UsuarioAutenticado? extrairUsuarioAutenticado(Request request) {
@@ -48,4 +50,28 @@ UsuarioAutenticado? extrairUsuarioAutenticado(Request request) {
   } catch (_) {
     return null;
   }
+}
+
+Response? bloquearSeNaoAdmin(Request request) {
+  final usuario = extrairUsuarioAutenticado(request);
+
+  if (usuario == null) {
+    return Response.json(
+      statusCode: 401,
+      body: {
+        'erro': 'Token ausente ou inválido',
+      },
+    );
+  }
+
+  if (!usuario.isAdmin) {
+    return Response.json(
+      statusCode: 403,
+      body: {
+        'erro': 'Acesso restrito ao administrador',
+      },
+    );
+  }
+
+  return null;
 }

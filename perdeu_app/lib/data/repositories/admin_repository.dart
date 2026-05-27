@@ -24,6 +24,34 @@ class AdminRepository {
     return _getList('/api/admin/usuarios');
   }
 
+  Future<bool> confirmarMatch({
+    required String id,
+  }) async {
+    final response = await _request(
+      method: 'PATCH',
+      path: '/api/admin/matches/$id/confirmar',
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is Map<String, dynamic>) {
+      final erro = decoded['erro']?.toString() ?? 'Erro ao confirmar match.';
+      final detalhe = decoded['detalhe']?.toString();
+
+      if (detalhe != null && detalhe.isNotEmpty) {
+        throw Exception('$erro\n$detalhe');
+      }
+
+      throw Exception(erro);
+    }
+
+    throw Exception('Erro ao confirmar match.');
+  }
+
   Future<bool> criarUsuario({
     required String nomeCompleto,
     required String matricula,
@@ -62,10 +90,10 @@ class AdminRepository {
       }
 
       throw Exception(erro);
-    }   
-
-        throw Exception('Erro ao criar usuário.');
     }
+
+    throw Exception('Erro ao criar usuário.');
+  }
 
   Future<bool> atualizarStatusRequerimento({
     required String id,
@@ -116,7 +144,14 @@ class AdminRepository {
     final decoded = jsonDecode(response.body);
 
     if (decoded is Map<String, dynamic>) {
-      throw Exception(decoded['erro']?.toString() ?? 'Erro administrativo.');
+      final erro = decoded['erro']?.toString() ?? 'Erro administrativo.';
+      final detalhe = decoded['detalhe']?.toString();
+
+      if (detalhe != null && detalhe.isNotEmpty) {
+        throw Exception('$erro\n$detalhe');
+      }
+
+      throw Exception(erro);
     }
 
     throw Exception('Erro administrativo.');

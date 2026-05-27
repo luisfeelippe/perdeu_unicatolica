@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -15,10 +18,13 @@ class PerfilView extends StatefulWidget {
 class _PerfilViewState extends State<PerfilView> {
   final PerfilRepository _perfilRepository = PerfilRepository();
   final AuthRepository _authRepository = AuthRepository();
+  final ImagePicker _imagePicker = ImagePicker();
 
   late Future<Map<String, dynamic>> _futurePerfil;
 
   bool _notificacoesAtivas = true;
+  bool _atualizandoFoto = false;
+  String? _fotoPerfil;
 
   @override
   void initState() {
@@ -47,6 +53,131 @@ class _PerfilViewState extends State<PerfilView> {
     setState(() {
       _notificacoesAtivas = value;
     });
+  }
+
+  Future<void> _selecionarFotoPerfil() async {
+    if (_atualizandoFoto) return;
+
+    try {
+      final imagem = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 75,
+        maxWidth: 800,
+      );
+
+      if (imagem == null) return;
+
+      setState(() {
+        _atualizandoFoto = true;
+      });
+
+      final bytes = await imagem.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final dataImage = 'data:image/jpeg;base64,$base64Image';
+
+      final fotoSalva = await _perfilRepository.atualizarFotoPerfil(
+        fotoPerfil: dataImage,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _fotoPerfil = fotoSalva;
+        _atualizandoFoto = false;
+        _futurePerfil = _perfilRepository.buscarPerfil();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF12A150),
+          content: Text('Foto de perfil atualizada com sucesso.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _atualizandoFoto = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _removerFotoPerfil() async {
+    if (_atualizandoFoto) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Remover foto?'),
+          content: const Text(
+            'Sua foto de perfil será removida e voltará para a inicial do seu nome.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Remover'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) return;
+
+    setState(() {
+      _atualizandoFoto = true;
+    });
+
+    try {
+      await _perfilRepository.removerFotoPerfil();
+
+      if (!mounted) return;
+
+      setState(() {
+        _fotoPerfil = null;
+        _atualizandoFoto = false;
+        _futurePerfil = _perfilRepository.buscarPerfil();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF12A150),
+          content: Text('Foto de perfil removida com sucesso.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _atualizandoFoto = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _logout() async {
@@ -112,6 +243,7 @@ class _PerfilViewState extends State<PerfilView> {
         final tipoPerfil = perfil['perfil']?.toString() ?? '-';
         final ativo = perfil['status_ativo'] == true;
         final isAdmin = tipoPerfil.toUpperCase() == 'ADMIN';
+        final foto = _fotoPerfil ?? perfil['foto_perfil']?.toString();
 
         return Scaffold(
           backgroundColor: const Color(0xFFF7F4F2),
@@ -137,16 +269,20 @@ class _PerfilViewState extends State<PerfilView> {
                 ),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 42,
-                      backgroundColor: const Color(0xFFFFE4D1),
-                      child: Text(
-                        nome.isNotEmpty ? nome[0].toUpperCase() : 'U',
-                        style: const TextStyle(
-                          color: Color(0xFFFF6600),
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                        ),
+                    _FotoPerfilAvatar(
+                      nome: nome,
+                      fotoPerfil: foto,
+                      atualizando: _atualizandoFoto,
+                      onAlterarFoto: _selecionarFotoPerfil,
+                      onRemoverFoto: _removerFotoPerfil,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Toque na foto para alterar ou remover',
+                      style: TextStyle(
+                        color: Colors.black45,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -225,7 +361,8 @@ class _PerfilViewState extends State<PerfilView> {
                   SwitchListTile.adaptive(
                     value: _notificacoesAtivas,
                     onChanged: _alterarNotificacoes,
-                    activeColor: const Color(0xFFFF6600),
+                    activeThumbColor: const Color(0xFFFF6600),
+                    activeTrackColor: const Color(0xFFFFE4D1),
                     title: const Text(
                       'Notificações ativas',
                       style: TextStyle(
@@ -291,6 +428,168 @@ class _PerfilViewState extends State<PerfilView> {
           ),
         );
       },
+    );
+  }
+}
+
+class _FotoPerfilAvatar extends StatelessWidget {
+  const _FotoPerfilAvatar({
+    required this.nome,
+    required this.fotoPerfil,
+    required this.atualizando,
+    required this.onAlterarFoto,
+    required this.onRemoverFoto,
+  });
+
+  final String nome;
+  final String? fotoPerfil;
+  final bool atualizando;
+  final VoidCallback onAlterarFoto;
+  final VoidCallback onRemoverFoto;
+
+  bool get _temFoto {
+    final foto = fotoPerfil;
+
+    return foto != null && foto.startsWith('data:image');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final foto = fotoPerfil;
+
+    Widget conteudo;
+
+    if (_temFoto) {
+      final base64Data = foto!.split(',').last;
+      final bytes = base64Decode(base64Data);
+
+      conteudo = Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        width: 92,
+        height: 92,
+      );
+    } else {
+      conteudo = Center(
+        child: Text(
+          nome.isNotEmpty ? nome[0].toUpperCase() : 'U',
+          style: const TextStyle(
+            color: Color(0xFFFF6600),
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      alignment: Alignment.bottomRight,
+      children: [
+        Material(
+          color: const Color(0xFFFFE4D1),
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: atualizando
+                ? null
+                : () {
+                    showModalBottomSheet<void>(
+                      context: context,
+                      backgroundColor: Colors.white,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      builder: (context) {
+                        return SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE6E0DB),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ListTile(
+                                  leading: const Icon(
+                                    Icons.photo_library_outlined,
+                                    color: Color(0xFFFF6600),
+                                  ),
+                                  title: const Text(
+                                    'Alterar foto',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    onAlterarFoto();
+                                  },
+                                ),
+                                if (_temFoto)
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                    ),
+                                    title: const Text(
+                                      'Remover foto',
+                                      style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      onRemoverFoto();
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              height: 92,
+              width: 92,
+              child: atualizando
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFF6600),
+                      ),
+                    )
+                  : conteudo,
+            ),
+          ),
+        ),
+        Container(
+          height: 30,
+          width: 30,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF6600),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 3,
+            ),
+          ),
+          child: const Icon(
+            Icons.camera_alt_rounded,
+            color: Colors.white,
+            size: 15,
+          ),
+        ),
+      ],
     );
   }
 }

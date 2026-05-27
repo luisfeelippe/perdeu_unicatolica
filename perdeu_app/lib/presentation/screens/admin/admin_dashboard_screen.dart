@@ -109,6 +109,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _confirmarMatch(String id) async {
+    try {
+      await _repository.confirmarMatch(id: id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _futureMatches = _repository.buscarMatches();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF12A150),
+          content: Text('Match concluído e removido da lista.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
+  }
+
   Future<void> _abrirModalNovoUsuario() async {
     final criado = await showModalBottomSheet<bool>(
       context: context,
@@ -182,6 +210,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 _MatchesTab(
                   future: _futureMatches ??
                       Future<List<Map<String, dynamic>>>.value([]),
+                  onConfirmarMatch: _confirmarMatch,
                 ),
                 _UsuariosTab(
                   future: _futureUsuarios ??
@@ -275,9 +304,11 @@ class _PendentesTab extends StatelessWidget {
 class _MatchesTab extends StatelessWidget {
   const _MatchesTab({
     required this.future,
+    required this.onConfirmarMatch,
   });
 
   final Future<List<Map<String, dynamic>>> future;
+  final void Function(String id) onConfirmarMatch;
 
   @override
   Widget build(BuildContext context) {
@@ -354,14 +385,7 @@ class _MatchesTab extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            backgroundColor: Color(0xFF12A150),
-                            content: Text(
-                              'Match confirmado. Protocolo disponível no fluxo de retirada.',
-                            ),
-                          ),
-                        );
+                        onConfirmarMatch(match['id'].toString());
                       },
                       icon: const Icon(Icons.link),
                       label: const Text('Confirmar Match'),

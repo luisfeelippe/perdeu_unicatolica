@@ -41,4 +41,94 @@ class PerfilRepository {
 
     throw Exception('Erro ao carregar perfil.');
   }
+
+  Future<String> atualizarFotoPerfil({
+    required String fotoPerfil,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? prefs.getString('jwt');
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Sessão expirada. Faça login novamente.');
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/perfil');
+
+    final response = await _client.patch(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'foto_perfil': fotoPerfil,
+      }),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      if (decoded is Map<String, dynamic>) {
+        return decoded['foto_perfil']?.toString() ?? fotoPerfil;
+      }
+
+      return fotoPerfil;
+    }
+
+    if (decoded is Map<String, dynamic>) {
+      final erro =
+          decoded['erro']?.toString() ?? 'Erro ao atualizar foto de perfil.';
+      final detalhe = decoded['detalhe']?.toString();
+
+      if (detalhe != null && detalhe.isNotEmpty) {
+        throw Exception('$erro\n$detalhe');
+      }
+
+      throw Exception(erro);
+    }
+
+    throw Exception('Erro ao atualizar foto de perfil.');
+  }
+
+  Future<void> removerFotoPerfil() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? prefs.getString('jwt');
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Sessão expirada. Faça login novamente.');
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/perfil');
+
+    final response = await _client.patch(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'foto_perfil': null,
+      }),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    if (decoded is Map<String, dynamic>) {
+      final erro =
+          decoded['erro']?.toString() ?? 'Erro ao remover foto de perfil.';
+      final detalhe = decoded['detalhe']?.toString();
+
+      if (detalhe != null && detalhe.isNotEmpty) {
+        throw Exception('$erro\n$detalhe');
+      }
+
+      throw Exception(erro);
+    }
+
+    throw Exception('Erro ao remover foto de perfil.');
+  }
 }

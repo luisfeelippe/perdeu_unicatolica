@@ -48,6 +48,7 @@ Future<Response> onRequest(RequestContext context) async {
       FROM matches_triagem m
       INNER JOIN requerimentos rn ON rn.id = m.requerimento_novo_id
       INNER JOIN requerimentos rc ON rc.id = m.requerimento_candidato_id
+      WHERE COALESCE(m.status_triagem, 'PENDENTE') NOT IN ('CONCLUIDO', 'CONFIRMADO')
       ORDER BY m.created_at DESC;
     ''');
 

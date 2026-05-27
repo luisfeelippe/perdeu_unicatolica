@@ -19,111 +19,120 @@ class ObjetoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusStyle = _statusStyle(requerimento.status);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              _buildImagem(),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusStyle.backgroundColor,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    _formatStatus(requerimento.status),
-                    style: TextStyle(
-                      color: statusStyle.textColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: compact ? 11 : 12,
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/objeto_detalhes',
+          arguments: requerimento,
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                _buildImagem(),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusStyle.backgroundColor,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      _formatStatus(requerimento.status),
+                      style: TextStyle(
+                        color: statusStyle.textColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: compact ? 11 : 12,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                compact ? 12 : 18,
-                compact ? 12 : 16,
-                compact ? 12 : 18,
-                compact ? 12 : 18,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    requerimento.categoria,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: compact ? 18 : 22,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF222222),
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 17,
-                        color: Color(0xFFFF6600),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          requerimento.localOcorrencia,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w600,
-                            fontSize: compact ? 13 : 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: Text(
-                      requerimento.descricao,
-                      maxLines: compact ? 3 : 4,
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  compact ? 12 : 18,
+                  compact ? 12 : 16,
+                  compact ? 12 : 18,
+                  compact ? 12 : 18,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      requerimento.categoria,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.black54,
-                        height: 1.35,
-                        fontSize: compact ? 13 : 15,
+                        fontSize: compact ? 18 : 22,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF222222),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 7),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 17,
+                          color: Color(0xFFFF6600),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            requerimento.localOcorrencia,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w600,
+                              fontSize: compact ? 13 : 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Text(
+                        requerimento.descricao,
+                        maxLines: compact ? 3 : 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.black54,
+                          height: 1.35,
+                          fontSize: compact ? 13 : 15,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

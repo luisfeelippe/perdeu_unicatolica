@@ -10,7 +10,7 @@ import 'presentation/screens/auth/nova_senha_screen.dart';
 import 'presentation/screens/auth/recuperacao_screen.dart';
 import 'presentation/screens/home/main_screen.dart';
 import 'presentation/screens/detalhes/detalhes_screen.dart';
-
+import 'presentation/screens/objetos/objeto_detalhes_screen.dart';
 import 'presentation/screens/wizard/wizard_tipo_screen.dart';
 import 'presentation/screens/wizard/wizard_categoria_screen.dart';
 import 'presentation/screens/wizard/wizard_local_screen.dart';
@@ -102,6 +102,8 @@ class PerdeuApp extends StatelessWidget {
         AppRoutes.assinarTermo: (context) => const TermoAssinaturaScreen(),
 
         AppRoutes.admin: (context) => const AdminDashboardScreen(),
+        
+        '/objeto_detalhes': (context) => const ObjetoDetalhesScreen(),
       },
     );
   }
